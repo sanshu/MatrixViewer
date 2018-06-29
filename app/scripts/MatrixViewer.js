@@ -94,7 +94,7 @@ MatrixViewer.prototype._parse = function (json) {
 //        console.log(pdbs);
 //        console.log(links);
 //
-        console.log("Data parsed.");
+        console.log('Data parsed.');
 
         links = this.clusterKmeans(links, numClusters);
         return {matrix: dataArray, pdbs: pdbs, links: links};
@@ -119,7 +119,7 @@ MatrixViewer.prototype.clusterKmeans = function (data, numClusters) {
 
         result = result.concat(group);
     });
-    console.log("Data clustered (k-means).");
+    console.log('Data clustered (k-means).');
     return result;
 
 };
@@ -147,7 +147,7 @@ MatrixViewer.prototype.draw = function (json) {
 
 
 MatrixViewer.prototype._draw = function () {
-    console.log("Drawing.");
+    console.log('Drawing.');
     var self = this;
     var nodes = self.data.pdbs;
     var margin = {
@@ -167,16 +167,16 @@ MatrixViewer.prototype._draw = function () {
         innerWidth = width - margin.left - margin.right - margin.legend.left - margin.legend.width
         ;
 
-    var svg = d3.select("matrix").append("svg")
-        .attr("width", width + margin.left + margin.right)
-        .attr("height", height + margin.top + margin.bottom)
-        .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    var svg = d3.select('matrix').append('svg')
+        .attr('width', width + margin.left + margin.right)
+        .attr('height', height + margin.top + margin.bottom)
+        .append('g')
+        .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 
-    svg.append("rect")
-        .attr("class", "background")
-        .attr("width", width)
-        .attr("height", height);
+    svg.append('rect')
+        .attr('class', 'background')
+        .attr('width', width)
+        .attr('height', height);
 
     var matrix = [];
     var numNodes = nodes.length;
@@ -206,62 +206,62 @@ MatrixViewer.prototype._draw = function () {
     });
 
     // Draw each row (translating the y coordinate)
-    var rows = svg.selectAll(".row")
+    var rows = svg.selectAll('.row')
         .data(matrix)
-        .enter().append("g")
-        .attr("class", "row")
-        .attr("transform", (d, i) => {
-            return "translate(0," + matrixScale(i) + ")";
+        .enter().append('g')
+        .attr('class', 'row')
+        .attr('transform', (d, i) => {
+            return 'translate(0,' + matrixScale(i) + ')';
         });
 
-    var squares = rows.selectAll(".cell")
+    var squares = rows.selectAll('.cell')
         .data(d => d.filter(item => item.z > 0))
-        .enter().append("rect")
-        .attr("class", "cell")
-        .attr("x", d => matrixScale(d.x))
-        .attr("width", matrixScale.bandwidth())
-        .attr("height", matrixScale.bandwidth())
-        .style("fill", d => {
+        .enter().append('rect')
+        .attr('class', 'cell')
+        .attr('x', d => matrixScale(d.x))
+        .attr('width', matrixScale.bandwidth())
+        .attr('height', matrixScale.bandwidth())
+        .style('fill', d => {
             return colorScale(d.group)//nodes[d.x].group == nodes[d.y].group ? colorScale(nodes[d.x].group) : "grey";
         })
-        .on("mouseover", mouseover)
-        .on("mouseout", mouseout);
+        .on('mouseover', mouseover)
+        .on('mouseout', mouseout);
 
-    var columns = svg.selectAll(".column")
+    var columns = svg.selectAll('.column')
         .data(matrix)
-        .enter().append("g")
-        .attr("class", "column")
-        .attr("transform", (d, i) => {
-            return "translate(" + matrixScale(i) + ")rotate(-90)";
+        .enter().append('g')
+        .attr('class', 'column')
+        .attr('transform', (d, i) => {
+            return 'translate(' + matrixScale(i) + ')rotate(-90)';
         });
 
-    rows.append("text")
-        .attr("class", "label")
-        .attr("x", -5)
-        .attr("y", matrixScale.bandwidth() / 2)
-        .attr("dy", ".32em")
-        .attr("text-anchor", "end")
+    rows.append('text')
+        .attr('class', 'label')
+        .attr('x', -5)
+        .attr('y', matrixScale.bandwidth() / 2)
+        .attr('dy', '.32em')
+        .attr('text-anchor', 'end')
         .text((d, i) => nodes[i].name);
 
-    columns.append("text")
-        .attr("class", "label")
-        .attr("y", 100)
-        .attr("y", matrixScale.bandwidth() / 2)
-        .attr("dy", ".32em")
-        .attr("text-anchor", "start")
+    columns.append('text')
+        .attr('class', 'label')
+        .attr('y', 100)
+        .attr('y', matrixScale.bandwidth() / 2)
+        .attr('dy', '.32em')
+        .attr('text-anchor', 'start')
         .text((d, i) => nodes[i].name);
 
     var colorLegend = d3.legendColor()
-        .title("Cluster id")
-        .labelFormat(d3.format(".0f"))
+        .title('Cluster id')
+        .labelFormat(d3.format('.0f'))
         .shapeWidth(30)
         .scale(colorScale)
-        .orient("horizontal")
+        .orient('horizontal')
 
         .labelOffset(12);
 
-    svg.append("g")
-        .attr("transform", "translate(" + margin.legend.left + "," + margin.legend.top + ")")
+    svg.append('g')
+        .attr('transform', 'translate(' + margin.legend.left + ',' + margin.legend.top + ')')
         .call(colorLegend);
 
 
@@ -275,7 +275,7 @@ MatrixViewer.prototype._draw = function () {
         })
     };
 
-    d3.select("#order").on("change", function () {
+    d3.select('#order').on('change', function () {
         changeOrder(this.value);
     });
 
@@ -283,52 +283,52 @@ MatrixViewer.prototype._draw = function () {
         matrixScale.domain(orders[value]);
         var t = svg.transition().duration(2000);
 
-        t.selectAll(".row")
+        t.selectAll('.row')
             .delay((d, i) => matrixScale(i) * 4)
-            .attr("transform", function (d, i) {
-                return "translate(0," + matrixScale(i) + ")";
+            .attr('transform', function (d, i) {
+                return 'translate(0,' + matrixScale(i) + ')';
             })
-            .selectAll(".cell")
+            .selectAll('.cell')
             .delay(d => matrixScale(d.x) * 4)
-            .attr("x", d => matrixScale(d.x));
+            .attr('x', d => matrixScale(d.x));
 
-        t.selectAll(".column")
+        t.selectAll('.column')
             .delay((d, i) => matrixScale(i) * 4)
-            .attr("transform", (d, i) => "translate(" + matrixScale(i) + ")rotate(-90)");
+            .attr('transform', (d, i) => 'translate(' + matrixScale(i) + ')rotate(-90)');
     }
 
-    rows.append("line")
-        .attr("x2", width);
+    rows.append('line')
+        .attr('x2', width);
 
-    columns.append("line")
-        .attr("x1", -width);
+    columns.append('line')
+        .attr('x1', -width);
 
-    var tooltip = d3.select("body")
-        .append("div")
-        .attr("class", "tooltip")
-        .style("opacity", 0);
+    var tooltip = d3.select('body')
+        .append('div')
+        .attr('class', 'tooltip')
+        .style('opacity', 0);
 
     function mouseover(p) {
-        d3.selectAll(".row text").classed("active", (d, i) => {
+        d3.selectAll('.row text').classed('active', (d, i) => {
             return i == p.y;
         });
-        d3.selectAll(".column text").classed("active", (d, i) => {
+        d3.selectAll('.column text').classed('active', (d, i) => {
             return i == p.x;
         });
-        tooltip.transition().duration(200).style("opacity", .9);
+        tooltip.transition().duration(200).style('opacity', .9);
         var group = matrix[p.x][p.y].group;
         tooltip.html(
-            nodes[p.y].name + " [" + group + "]</br>" +
-            nodes[p.x].name + " [" + group + "]</br>" +
+            nodes[p.y].name + ' [' + group + ']</br>' +
+            nodes[p.x].name + ' [' + group + ']</br>' +
             p.z)
-            .style("left", (d3.event.pageX + 30) + "px")
-            .style("top", (d3.event.pageY - 50) + "px");
+            .style('left', (d3.event.pageX + 30) + 'px')
+            .style('top', (d3.event.pageY - 50) + 'px');
 
     }
 
     function mouseout() {
-        d3.selectAll("text").classed("active", false);
-        tooltip.transition().duration(500).style("opacity", 0);
+        d3.selectAll('text').classed('active', false);
+        tooltip.transition().duration(500).style('opacity', 0);
     }
 
     return;

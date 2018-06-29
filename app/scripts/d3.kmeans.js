@@ -19,7 +19,7 @@ function kmeans(arrayToProcess, numberOfClusters, accessor) {
     a = (typeof a === Array) ? a : [a];
     b = (typeof b === Array) ? b : [b];
     if (a.length !== b.length) {
-      throw "Number of dimensions not aligned between data points."
+      throw 'Number of dimensions not aligned between data points.'
     }
 
     var ds = 0;
@@ -115,6 +115,6 @@ function kmeans(arrayToProcess, numberOfClusters, accessor) {
 
   return groups;
 }
-if (typeof d3 !== "undefined") {
+if (typeof d3 !== 'undefined') {
   d3.kmeans = kmeans;
 }
