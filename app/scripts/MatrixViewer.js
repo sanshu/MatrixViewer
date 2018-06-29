@@ -185,8 +185,6 @@ MatrixViewer.prototype._draw = function () {
 
 // Create rows for the matrix
     nodes.forEach(function (node) {
-        node.count = 0;
-//        node.group = groupToInt(node.group);
         matrix[node.index] = d3.range(numNodes).map(i => {
             return {
                 x: i,
@@ -271,7 +269,13 @@ MatrixViewer.prototype._draw = function () {
             return d3.ascending(nodes[a].name, nodes[b].name);
         }),
         group: d3.range(numNodes).sort((a, b) => {
-            return nodes[a].group - nodes[b].group;
+            a = Math.min(numNodes-2, a);
+            b = Math.min(numNodes-2, b);
+            var group1 = matrix[a][a + 1].z;
+            var group2 = matrix[b][b + 1].z;
+
+            return group1 - group2;
+//            return nodes[a].group - nodes[b].group;
         })
     };
 
@@ -308,6 +312,7 @@ MatrixViewer.prototype._draw = function () {
         .attr('class', 'tooltip')
         .style('opacity', 0);
 
+
     function mouseover(p) {
         d3.selectAll('.row text').classed('active', (d, i) => {
             return i == p.y;
@@ -319,7 +324,7 @@ MatrixViewer.prototype._draw = function () {
         var group = matrix[p.x][p.y].group;
         tooltip.html(
             nodes[p.y].name + ' [' + group + ']</br>' +
-            nodes[p.x].name + ' [' + group + ']</br>' +
+            nodes[p.x].name + ' [' + group + ']</br>RMSD: ' +
             p.z)
             .style('left', (d3.event.pageX + 30) + 'px')
             .style('top', (d3.event.pageY - 50) + 'px');
