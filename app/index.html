@@ -1,0 +1,320 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <!-- @author Mayya Sedova <msedova.dev@gmail.com> -->
+    <!-- @repo https://github.com/sanshu/MatrixViewer> -->
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <title>MatrixViewer</title>
+
+        <link rel="apple-touch-icon" href="apple-touch-icon.png">
+        <!-- Place favicon.ico in the root directory -->
+
+        <!-- build:css styles/vendor.css -->
+        <!-- bower:css -->
+        <link rel="stylesheet" href="/bower_components/bootstrap/dist/css/bootstrap.css" />
+        <!-- endbower -->
+        <!-- endbuild -->
+
+        <!-- build:css styles/main.css -->
+        <link rel="stylesheet" href="styles/main.css">
+        <!-- endbuild -->
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"
+                integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+                crossorigin="anonymous">
+        </script>
+
+        <!-- build:js scripts/vendor/modernizr.js -->
+        <script src="/bower_components/modernizr/modernizr.js"></script>
+        <!-- endbuild -->
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+        <style>
+
+            /* disable text selection */
+            svg *::selection {
+                background : transparent;
+            }
+
+            svg *::-moz-selection {
+                background:transparent;
+            } 
+
+            svg *::-webkit-selection {
+                background:transparent;
+            }
+            svg{
+                border: 1px solid #EEE;
+            }
+
+            rect.selection {
+                stroke          : #333;
+                stroke-dasharray: 4px;
+                stroke-opacity  : 0.5;
+                fill            : transparent;
+            }
+
+            rect.cell-border {
+                stroke: #eee;
+                stroke-width:0.3px;   
+            }
+
+            rect.cell-selected {
+                stroke: rgb(51,102,153);
+                stroke-width:0.5px;   
+            }
+
+            rect.cell-hover {
+                stroke: #F00;
+                stroke-width:0.3px;   
+            }
+
+            text.mono {
+                font-size: 9pt;
+                font-family: Consolas, courier;
+                fill: #aaa;
+            }
+
+            text.text-selected {
+                fill: #000;
+            }
+
+            text.text-highlight {
+                fill: #c00;
+            }
+            text.text-hover {
+                fill: #00C;
+            }
+
+            #tooltip {
+                position: absolute;
+                width: 200px;
+                height: auto;
+                padding: 10px;
+                background-color: white;
+                -webkit-border-radius: 10px;
+                -moz-border-radius: 10px;
+                border-radius: 10px;
+                -webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+                -moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+                box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+                pointer-events: none;
+            }
+
+            #tooltip.hidden {
+                display: none;
+            }
+
+            #tooltip p {
+                margin: 0;
+                font-family: sans-serif;
+                font-size: 12px;
+                line-height: 20px;
+            }
+            .axis path {
+                display: none;
+            }
+            .axis line {
+                stroke-opacity: 0.3;
+                shape-rendering: crispEdges;
+            }
+
+            #cmContainer {
+                padding:15px;
+            }
+        </style>
+        <style>
+            .background{
+                fill: #eee;
+            }
+            .label {
+                font: 300 12px "Helvetica Neue", Helvetica, Arial, sans-serif;
+                fill: #2f2f2f;
+            }
+            div.tooltip {
+                position: absolute;
+                text-align: center;
+                width: 400px;
+                border-radius: 5px;
+                padding: 2px;
+                background: white;
+                border: 0px;
+                pointer-events: none;
+                box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+                transition: 0.3s;
+            }
+            text.active {
+                fill: red;
+                font-weight: bold;
+            }
+            line {
+                stroke: #fff;
+            }
+            .container {
+                display: grid;
+                width: 1000px;
+                grid-template-areas: "head head"
+                    "intro intro"
+                    "graph aside";
+                grid-template-columns: auto auto;
+                justify-items: center;
+                margin: auto;
+            }
+            graph {
+                grid-area: graph;
+            }
+            aside {
+                grid-area: aside;
+                margin: 5px;
+                margin-top: 280px;
+            }
+            body {
+                text-align: center;
+            }
+            #title {
+                font-family: 'Sintony', sans-serif;
+                font-weight: 200;
+                font-size: 38px;
+                margin-top: 45px;
+                margin-bottom: 0px;
+            }
+            #subtitle {
+                font-family: 'Sintony', sans-serif;
+                font-weight: 300;
+                font-size: 13px;
+                margin-top: 5px;
+                margin-bottom: 55px;
+                color: #e04556;
+            }
+            h1 {
+                font-family: 'Sintony', sans-serif;
+                font-weight: 700;
+                line-height: 51px;
+                font-size: 46px;
+                text-transform: uppercase;
+                margin: 0 0 23px 0;
+            }
+        </style>
+        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-legend/2.25.6/d3-legend.min.js"></script>
+        <!-- build:js scripts/MatrixViewer.js -->
+
+        <script src="scripts/d3.kmeans.js"></script>
+        <script src="scripts/MatrixViewer.js"></script>
+        <!-- endbuild -->
+
+        <script>
+                    var viewer;
+
+                    function draw(error, matrix) {
+                        if (error)
+                            throw error;
+
+
+                        $('#data').val(matrix);
+                        var e = document.getElementById("numClusters");
+                        var clust = e.options[e.selectedIndex].value;
+
+                        var results = {matrix: matrix, numClusters: clust};
+                        viewer.draw(results, clust);
+                    }
+
+                    function drawData() {
+                        console.log('drawing');
+                        var data = $('#data').val().trim();
+                        draw(null, data);
+                    }
+
+                    function clearData() {
+                        console.log("clearing...");
+                        $('#data').val("");
+                        MatrixViewer.clear();
+                    }
+
+                    function showExample(id) {
+                        var file = './data/' + id;
+                        d3.queue()
+                            .defer(d3.text, file)
+                            .await(draw);
+                    }
+
+                    $(document).ready(function () {
+                        viewer = new MatrixViewer("#matrixContainer")
+                        showExample('1k3uA');
+                    });
+
+
+        </script> 
+    </head>
+    <body>
+        <!--[if IE]>
+          <p class="browserupgrade">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+
+        <div class="container-fluid" >
+            <div class="header">                
+                <h3 class="text-muted">MatrixViewer</h3>
+            </div>
+            <div class="row">
+                <div class="col-sm-12">
+                    <div class="card">
+                        <div class="card-header" id="headingOne">
+                            <h5 class="mb-0">
+                                <a class="btn btn-dark" data-toggle="collapse" href="#collapse" role="button" aria-expanded="false" aria-controls="collapse">Enter data</a>
+                            </h5>
+                        </div>
+                        <div class="card-body collapse multi-collapse" id="collapse">
+
+                            <div class="row"> 
+                                <div class="col-sm-8">
+                                    <label for="data">Matrix data</label>
+                                    <textarea class="form-control" id="data" rows="5"></textarea>
+                                </div>
+                                <div class="col-sm-3">
+                                    <div class="row">
+                                        <div class="form-group">
+                                            <label for="numClusters">Number of clusters</label>
+                                            <select class="form-control" id="numClusters">
+
+                                                <option>3</option>
+                                                <option>4</option>
+                                                <option>5</option>
+                                                <option>6</option>
+                                                <option>7</option>
+                                            </select>
+                                        </div>
+
+                                    </div>
+                                    <div class="row">
+                                        <button type="button" class="btn btn-secondary btn-sm mx-1" onclick="drawData()">Display</button>
+
+                                        <button type="button" class="btn btn-secondary btn-sm mx-1" onclick="clearData();">Clear</button>
+                                        <br />Try example: 
+                                        <button type="button" class="btn btn-link" onclick="showExample('1k3uA')">1k3uA</button>
+                                        <button type="button" class="btn btn-link" onclick="showExample('4ns2A')">4ns2A</button>
+                                        <button type="button" class="btn btn-link" onclick="showExample('4djcA')">4djcA (big one)</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row marketing" id='matrixContainer'>
+            </div>
+        </div>
+
+
+        <!-- build:js scripts/vendor.js -->
+        <!-- bower:js -->
+        <script src="/bower_components/modernizr/modernizr.js"></script>
+        <!-- endbower -->
+        <!-- endbuild -->
+
+        <!-- build:js scripts/plugins.js -->
+        <!-- endbuild -->
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>
+
+    </body>
+</html>
