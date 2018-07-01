@@ -340,8 +340,8 @@ MatrixViewer.prototype._draw = function () {
 //            return nodes[a].group - nodes[b].group;
         }),
         rmsd: d3.range(numNodes).sort((a, b) => {
-            a = Math.min(numNodes - 2, a);
-            b = Math.min(numNodes - 2, b);
+//            a = Math.min(numNodes - 2, a);
+//            b = Math.min(numNodes - 2, b);
 
             var group1 = matrix[1][a].z;
             var group2 = matrix[1][b].z;
