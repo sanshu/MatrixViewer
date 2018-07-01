@@ -10,9 +10,9 @@ function MatrixViewer(parentId) {
 }
 
 MatrixViewer.prototype.selectHTML = '<p>Order by: <select id="order"> ' +
-    ' <option value="name">PDB ID</option>' +
-    ' <option value="group">cluster</option>' +
     ' <option value="rmsd">RMSD</option>' +
+    ' <option value="name">PDB ID</option>' +
+    ' <option value="group">cluster (k-means)</option>' +
     '     </select>';
 MatrixViewer.prototype.alertHTML = '<div class="alert alert-light col-6" role="alert" ' +
     'id="alertbox">&nbsp;</div>'
@@ -205,6 +205,11 @@ MatrixViewer.prototype.draw = function (json) {
     if (this.data !== null) {
         this._draw();
     }
+
+    var sel = document.getElementById('order');
+    sel.options[0].selected = true;
+    sel.dispatchEvent(new Event('change'));
+
 }; // end of draw()
 
 
