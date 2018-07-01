@@ -259,7 +259,7 @@ MatrixViewer.prototype._draw = function () {
     var colorScaleCluster = d3.scaleOrdinal(d3.schemeCategory10);
 
     var colorScaleRMSD = d3.scaleSequential(d3.interpolateYlGnBu);
-    var colorScale = colorScaleCluster;
+    var colorScale = colorScaleRMSD;
 
 // Create rows for the matrix
     nodes.forEach(function (node) {
