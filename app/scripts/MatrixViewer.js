@@ -4,7 +4,7 @@
 //var clusterfck = require("clusterfck");
 
 function MatrixViewer(parentId) {
-    d3.select(parentId).html('<div class="row px-3" style="width:100%" id="_matrixview">' + this.selectHTML + this.alertHTML + '</div>' + this.cmHTML + this.tooltipHTML);
+    d3.select(parentId).html('<div class="row px-3" style="width:100%" id="_matrixview">' + this.selectHTML + this.colorHTML + this.alertHTML + '</div>' + this.cmHTML + this.tooltipHTML);
     this.hideAlert();
     this._parentId = parentId;
 }
@@ -13,6 +13,10 @@ MatrixViewer.prototype.selectHTML = '<p>Order by: <select id="order"> ' +
     ' <option value="rmsd">RMSD</option>' +
     ' <option value="name">PDB ID</option>' +
     ' <option value="group">cluster (k-means)</option>' +
+    '     </select>';
+MatrixViewer.prototype.colorHTML = '<p>Color by: <select id="color"> ' +
+    ' <option value="rmsd">RMSD</option>' +
+    ' <option value="cluster">cluster id (k-means)</option>' +
     '     </select>';
 MatrixViewer.prototype.alertHTML = '<div class="alert alert-light col-6" role="alert" ' +
     'id="alertbox">&nbsp;</div>'
@@ -126,7 +130,7 @@ MatrixViewer.prototype.hcluster = function (data) {
 
 
     function children(d) {
-        console.log(d);
+//        console.log(d);
         var l = d.left || null,
             r = d.right || null,
             res = [];
@@ -138,11 +142,11 @@ MatrixViewer.prototype.hcluster = function (data) {
         }
         return null;
     }
-    console.log(data[0]);
+//    console.log(data[0]);
 
     var clusters = clusterfck.hcluster(data);
-    console.log('hclusters');
-    console.log(clusters[0]);
+//    console.log('hclusters');
+//    console.log(clusters[0]);
 
     var tree = d3.hierarchy(clusters[0], children);
     return tree.leaves();
@@ -206,7 +210,11 @@ MatrixViewer.prototype.draw = function (json) {
         this._draw();
     }
 
-    var sel = document.getElementById('order');
+    var sel = document.getElementById('color');
+    sel.options[0].selected = true;
+    sel.dispatchEvent(new Event('change'));
+
+    sel = document.getElementById('order');
     sel.options[0].selected = true;
     sel.dispatchEvent(new Event('change'));
 
@@ -220,7 +228,7 @@ MatrixViewer.prototype._draw = function () {
     var margin = {
         top: 150,
         right: 50,
-        bottom: 0,
+        bottom: 10,
         left: 50,
         legend: {
             top: -100,
@@ -248,7 +256,10 @@ MatrixViewer.prototype._draw = function () {
     var matrix = [];
     var numNodes = nodes.length;
     var matrixScale = d3.scaleBand().range([0, width]).domain(d3.range(numNodes));
-    var colorScale = d3.scaleOrdinal(d3.schemeCategory10);
+    var colorScaleCluster = d3.scaleOrdinal(d3.schemeCategory10);
+
+    var colorScaleRMSD = d3.scaleSequential(d3.interpolateYlGnBu);
+    var colorScale = colorScaleCluster;
 
 // Create rows for the matrix
     nodes.forEach(function (node) {
@@ -316,19 +327,8 @@ MatrixViewer.prototype._draw = function () {
         .attr('text-anchor', 'start')
         .text((d, i) => nodes[i].name);
 
-    var colorLegend = d3.legendColor()
-        .title('Cluster id')
-        .labelFormat(d3.format('.0f'))
-        .shapeWidth(30)
-        .scale(colorScale)
-        .orient('horizontal')
 
-        .labelOffset(12);
-
-    svg.append('g')
-        .attr('transform', 'translate(' + margin.legend.left + ',' + margin.legend.top + ')')
-        .call(colorLegend);
-
+    legend('Cluster id', colorScale);
 
     // Precompute the orders.
     var orders = {
@@ -350,16 +350,21 @@ MatrixViewer.prototype._draw = function () {
 
             var group1 = matrix[1][a].z;
             var group2 = matrix[1][b].z;
-
+            if (group1 != group2)
+                return group1 - group2;
+            // extra sorting
+            var group1 = matrix[numNodes - 1][a].z;
+            var group2 = matrix[numNodes - 1][b].z;
             return group1 - group2;
-//            return nodes[a].group - nodes[b].group;
         })
     };
 
     d3.select('#order').on('change', function () {
         changeOrder(this.value);
     });
-
+    d3.select('#color').on('change', function () {
+        changeColor(this.value);
+    });
     function changeOrder(value) {
         matrixScale.domain(orders[value]);
         var t = svg.transition().duration(2000);
@@ -376,6 +381,47 @@ MatrixViewer.prototype._draw = function () {
         t.selectAll('.column')
             .delay((d, i) => matrixScale(i) * 4)
             .attr('transform', (d, i) => 'translate(' + matrixScale(i) + ')rotate(-90)');
+    }
+
+    function changeColor(value) {
+//        return;
+        if (value === 'rmsd') {
+            colorScale = colorScaleRMSD;
+            svg.selectAll('.cell')
+                .transition()
+                .style('fill', function (d) {
+                    return colorScale(d.z);
+                });
+
+            legend('RMSD', colorScale);
+        } else {
+            colorScale = colorScaleCluster;
+
+            svg.selectAll('.cell')
+                .transition()
+                .style('fill', function (d) {
+                    return colorScale(d.group);
+                });
+
+            legend('Cluster id', colorScale);
+        }
+    }
+
+    var legendGroup;
+    function legend(title, colors) {
+        return;
+        legendGroup && legendGroup.remove();
+        var colorLegend = d3.legendColor()
+            .title(title)
+            .labelFormat(d3.format('.1f'))
+            .shapeWidth(30)
+            .scale(colors)
+            .orient('horizontal')
+            .labelOffset(12);
+
+        legendGroup = svg.append('g')
+            .attr('transform', 'translate(' + margin.legend.left + ',' + margin.legend.top + ')')
+            .call(colorLegend);
     }
 
     rows.append('line')
@@ -400,8 +446,8 @@ MatrixViewer.prototype._draw = function () {
         tooltip.transition().duration(200).style('opacity', .9);
         var group = matrix[p.x][p.y].group;
         tooltip.html(
-            nodes[p.y].name + ' [' + group + ']</br>' +
-            nodes[p.x].name + ' [' + group + ']</br>RMSD: ' +
+            nodes[p.y].name + '<br>' +
+            nodes[p.x].name + '<br>[ cluster' + group + ']</br>RMSD: ' +
             p.z)
             .style('left', (d3.event.pageX + 30) + 'px')
             .style('top', (d3.event.pageY - 50) + 'px');
