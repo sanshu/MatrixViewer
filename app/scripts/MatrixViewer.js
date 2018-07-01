@@ -1,6 +1,7 @@
 /**
  * @author Mayya Sedova <msedova.dev@gmail.com>
  */
+//var clusterfck = require("clusterfck");
 
 function MatrixViewer(parentId) {
     d3.select(parentId).html('<div class="row px-3" style="width:100%" id="_matrixview">' + this.selectHTML + this.alertHTML + '</div>' + this.cmHTML + this.tooltipHTML);
@@ -10,7 +11,8 @@ function MatrixViewer(parentId) {
 
 MatrixViewer.prototype.selectHTML = '<p>Order by: <select id="order"> ' +
     ' <option value="name">PDB ID</option>' +
-    '         <option value="group">cluster</option>' +
+    ' <option value="group">cluster</option>' +
+    ' <option value="rmsd">RMSD</option>' +
     '     </select>';
 MatrixViewer.prototype.alertHTML = '<div class="alert alert-light col-6" role="alert" ' +
     'id="alertbox">&nbsp;</div>'
@@ -58,6 +60,9 @@ MatrixViewer.prototype._parse = function (json) {
 
         var ni = 0; // node index counter
 
+
+        var rmsdMatrix = []; // matrix with rmsd values for clustering
+
         var dataArray = dsv.parseRows(data, function (d, i) {
             // d is array
 //            console.log(d);
@@ -75,6 +80,9 @@ MatrixViewer.prototype._parse = function (json) {
                 n1 = {name: pdb1, index: ni};
                 nodeset[pdb1] = n1;
                 pdbs.push(n1);
+
+                rmsdMatrix[n1.index] = rmsdMatrix[n1.index] || [];
+                rmsdMatrix[n1.index][n1.index] = 0;
             }
 
             n2 = nodeset[pdb2];
@@ -85,7 +93,12 @@ MatrixViewer.prototype._parse = function (json) {
                 n2 = {name: pdb2, index: ni};
                 nodeset[pdb2] = n2;
                 pdbs.push(n2);
+                rmsdMatrix[n2.index] = rmsdMatrix[n2.index] || [];
+                rmsdMatrix[n2.index][n2.index] = 0;
             }
+
+            rmsdMatrix[n1.index][n2.index] = value;
+            rmsdMatrix[n2.index][n1.index] = value;
 
             links.push({source: n1.index, target: n2.index, value: value});
 
@@ -97,6 +110,9 @@ MatrixViewer.prototype._parse = function (json) {
         console.log('Data parsed.');
 
         links = this.clusterKmeans(links, numClusters);
+
+        var hleaves = this.hcluster(rmsdMatrix);
+
         return {matrix: dataArray, pdbs: pdbs, links: links};
     } catch (e) {
         console.log(e);
@@ -104,6 +120,52 @@ MatrixViewer.prototype._parse = function (json) {
         return null;
     }
 }
+
+MatrixViewer.prototype.hcluster = function (data) {
+    // clusterfck needs 2d array of values
+
+
+    function children(d) {
+        console.log(d);
+        var l = d.left || null,
+            r = d.right || null,
+            res = [];
+        l && res.push(l);
+        r && res.push(r);
+
+        if (res.length > 0) {
+            return res;
+        }
+        return null;
+    }
+    console.log(data[0]);
+
+    var clusters = clusterfck.hcluster(data);
+    console.log('hclusters');
+    console.log(clusters[0]);
+
+    var tree = d3.hierarchy(clusters[0], children);
+    return tree.leaves();
+
+//    var colorCluster = hcluster()
+//        .distance('euclidean') // support for 'euclidean' and 'angular'
+//        .linkage('avg')        // support for 'avg', 'max' and 'min'
+//        .verbose(true)         // false by default
+//        .posKey('rgbValue')    // 'position' by default
+//
+//        // pass in an array of objects w/ array values for 'position' or specified posKey()
+//        .data(data);         // as an array of objects w/ array values for 'position'
+//
+//// integrate into d3 layout.cluster
+//    var cluster = d3.layout.cluster().size([200, 200]),
+//        nodes = cluster.nodes(colorCluster.tree()),
+//        links = cluster.links(nodes);
+//
+//// get the tree, cut incertain ways
+//    colorCluster.orderedNodes();  // returns array of leaves, ordered by tree structure
+//    colorCluster.getClusters(k); // return k(2 to n) clusters of leaves
+
+};
 
 MatrixViewer.prototype.clusterKmeans = function (data, numClusters) {
     var clusters = d3.kmeans(data, numClusters, function (d) {
@@ -269,10 +331,20 @@ MatrixViewer.prototype._draw = function () {
             return d3.ascending(nodes[a].name, nodes[b].name);
         }),
         group: d3.range(numNodes).sort((a, b) => {
-            a = Math.min(numNodes-2, a);
-            b = Math.min(numNodes-2, b);
-            var group1 = matrix[a][a + 1].z;
-            var group2 = matrix[b][b + 1].z;
+            a = Math.min(numNodes - 2, a);
+            b = Math.min(numNodes - 2, b);
+            var group1 = matrix[a][a + 1].value;
+            var group2 = matrix[b][b + 1].value;
+
+            return group1 - group2;
+//            return nodes[a].group - nodes[b].group;
+        }),
+        rmsd: d3.range(numNodes).sort((a, b) => {
+            a = Math.min(numNodes - 2, a);
+            b = Math.min(numNodes - 2, b);
+
+            var group1 = matrix[1][a].z;
+            var group2 = matrix[1][b].z;
 
             return group1 - group2;
 //            return nodes[a].group - nodes[b].group;
