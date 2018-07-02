@@ -1,7 +1,6 @@
 /**
  * @author Mayya Sedova <msedova.dev@gmail.com>
  */
-//var clusterfck = require("clusterfck");
 
 function MatrixViewer(parentId) {
     d3.select(parentId).html('<div class="row px-3" style="width:100%" id="_matrixview">' + this.selectHTML + this.colorHTML + this.alertHTML + '</div>' + this.cmHTML + this.tooltipHTML);
@@ -10,15 +9,16 @@ function MatrixViewer(parentId) {
 }
 
 MatrixViewer.prototype.selectHTML = '<p>Order by: <select id="order"> ' +
+    ' <option value="hcluster">cluster (hierarchical)</option>' +
     ' <option value="rmsd">RMSD</option>' +
     ' <option value="name">PDB ID</option>' +
     ' <option value="group">cluster (k-means)</option>' +
-    ' <option value="hcluster">cluster (hierarchical)</option>' +
     '     </select>';
-MatrixViewer.prototype.colorHTML = '<p>Color by: <select id="color"> ' +
-    ' <option value="rmsd">RMSD</option>' +
-    ' <option value="cluster">cluster id (k-means)</option>' +
-    '     </select>';
+MatrixViewer.prototype.colorHTML = '';
+//'<p>Color by: <select id="color"> ' +
+//    ' <option value="rmsd">RMSD</option>' +
+//    ' <option value="cluster">cluster id (k-means)</option>' +
+//    '     </select>';
 MatrixViewer.prototype.alertHTML = '<div class="alert alert-light col-6" role="alert" ' +
     'id="alertbox">&nbsp;</div>'
 MatrixViewer.prototype.cmHTML = '<div class="row"><div class="col-12"><matrix id="matrix"></matrix></div>';
@@ -137,9 +137,7 @@ MatrixViewer.prototype._parse = function (json) {
 MatrixViewer.prototype.hcluster = function (data) {
     // clusterfck needs 2d array of values
 
-
     function children(d) {
-//        console.log(d);
         var l = d.left || null,
             r = d.right || null,
             res = [];
@@ -151,12 +149,8 @@ MatrixViewer.prototype.hcluster = function (data) {
         }
         return null;
     }
-//    console.log(data[0]);
 
     var clusters = clusterfck.hcluster(data);
-//    console.log('hclusters');
-//    console.log(clusters[0]);
-
     var tree = d3.hierarchy(clusters[0], children);
     var tree1 = d3.cluster();
     tree1(tree);
@@ -173,7 +167,7 @@ MatrixViewer.prototype.hcluster = function (data) {
         order.push(i);
     });
     console.log('Data clustered (hierarchical)');
-    console.log(order);
+//    console.log(order);
 
     return order;
 };
@@ -212,22 +206,27 @@ MatrixViewer.prototype.draw = function (json) {
         - pleft - pright - 15; // little less than inner width of parent element
 
     this.data = this._parse(json);
-    console.log(this.data);
+
+//    console.log(this.data);
+
     if (this.data !== null) {
         this._draw();
     }
 
-    var sel = document.getElementById('color');
-    sel.options[0].selected = true;
-    sel.dispatchEvent(new Event('change'));
+//    var sel = document.getElementById('color');
+//    sel.options[0].selected = true;
+//    sel.dispatchEvent(new Event('change'));
 
-    sel = document.getElementById('order');
+    var sel = document.getElementById('order');
     sel.options[0].selected = true;
     sel.dispatchEvent(new Event('change'));
 
 }; // end of draw()
 
-
+/**
+ * private functions, do not call directly from app
+ * @return {undefined}
+ */
 MatrixViewer.prototype._draw = function () {
     console.log('Drawing.');
     var self = this;
@@ -265,10 +264,11 @@ MatrixViewer.prototype._draw = function () {
     var maxRMSD = d3.max(self.data.links, function (d) {
         return d.value;
     });
-    var matrixScale = d3.scaleBand().range([0, width]).domain(d3.range(numNodes));
-    var colorScaleCluster = d3.scaleOrdinal(d3.schemeCategory10);
 
-    var colorScaleRMSD = d3.scaleSequential(d3.interpolateYlGnBu);
+    var matrixScale = d3.scaleBand().range([0, width]).domain(d3.range(numNodes));
+//    var colorScaleCluster = d3.scaleOrdinal(d3.schemeCategory10);
+
+    var colorScaleRMSD = d3.scaleSequential(d3.interpolateRdYlGn);
     var colorScale = colorScaleRMSD;
 
 // Create rows for the matrix
@@ -309,7 +309,7 @@ MatrixViewer.prototype._draw = function () {
         .attr('width', matrixScale.bandwidth())
         .attr('height', matrixScale.bandwidth())
         .style('fill', d => {
-            return colorScale(d.group)//nodes[d.x].group == nodes[d.y].group ? colorScale(nodes[d.x].group) : "grey";
+            return colorScale(d.group);
         })
         .on('mouseover', mouseover)
         .on('mouseout', mouseout);
@@ -337,9 +337,6 @@ MatrixViewer.prototype._draw = function () {
         .attr('dy', '.32em')
         .attr('text-anchor', 'start')
         .text((d, i) => nodes[i].name);
-
-
-    legend('Cluster id', colorScale);
 
     // Precompute the orders.
     var orders = {
@@ -374,9 +371,14 @@ MatrixViewer.prototype._draw = function () {
     d3.select('#order').on('change', function () {
         changeOrder(this.value);
     });
-    d3.select('#color').on('change', function () {
-        changeColor(this.value);
-    });
+
+    changeColor('rmsd');
+
+
+//    d3.select('#color').on('change', function () {
+//        changeColor(this.value);
+//    });
+
     function changeOrder(value) {
         matrixScale.domain(orders[value]);
         var t = svg.transition().duration(2000);
@@ -421,8 +423,8 @@ MatrixViewer.prototype._draw = function () {
 
     var legendGroup;
     function legend(title, colors) {
-        return;
-        legendGroup && legendGroup.remove();
+//        return;
+//        legendGroup && legendGroup.remove();
         var colorLegend = d3.legendColor()
             .title(title)
             .labelFormat(d3.format('.1f'))
@@ -458,12 +460,11 @@ MatrixViewer.prototype._draw = function () {
         tooltip.transition().duration(200).style('opacity', .9);
         var group = matrix[p.x][p.y].group;
         tooltip.html(
-            nodes[p.y].name + '<br>' +
-            nodes[p.x].name + '<br>[ cluster' + group + ']</br>RMSD: ' +
+            nodes[p.y].name + ' : ' +
+            nodes[p.x].name + '<br>RMSD: ' +
             p.z)
             .style('left', (d3.event.pageX + 30) + 'px')
             .style('top', (d3.event.pageY - 50) + 'px');
-
     }
 
     function mouseout() {
