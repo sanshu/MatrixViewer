@@ -13,6 +13,7 @@ MatrixViewer.prototype.selectHTML = '<p>Order by: <select id="order"> ' +
     ' <option value="rmsd">RMSD</option>' +
     ' <option value="name">PDB ID</option>' +
     ' <option value="group">cluster (k-means)</option>' +
+    ' <option value="hcluster">cluster (hierarchical)</option>' +
     '     </select>';
 MatrixViewer.prototype.colorHTML = '<p>Color by: <select id="color"> ' +
     ' <option value="rmsd">RMSD</option>' +
@@ -115,9 +116,11 @@ MatrixViewer.prototype._parse = function (json) {
 
         links = this.clusterKmeans(links, numClusters);
 
-        var hleaves = this.hcluster(rmsdMatrix);
+        var hclusters = this.hcluster(rmsdMatrix);
 
-        return {matrix: dataArray, pdbs: pdbs, links: links};
+
+
+        return {matrix: dataArray, pdbs: pdbs, links: links, hclusters: hclusters};
     } catch (e) {
         console.log(e);
         this.alert('Wrong input format. Required format: [PDB1 PDB2 contact RMSD]');
@@ -125,6 +128,12 @@ MatrixViewer.prototype._parse = function (json) {
     }
 }
 
+/**
+ * Performs hierarchical clustering and ordering of elements.
+ * Returns array of element indices in original data
+ * @param {type} data
+ * @return {Array|MatrixViewer.prototype.hcluster.order}
+ */
 MatrixViewer.prototype.hcluster = function (data) {
     // clusterfck needs 2d array of values
 
@@ -149,26 +158,24 @@ MatrixViewer.prototype.hcluster = function (data) {
 //    console.log(clusters[0]);
 
     var tree = d3.hierarchy(clusters[0], children);
-    return tree.leaves();
+    var tree1 = d3.cluster();
+    tree1(tree);
 
-//    var colorCluster = hcluster()
-//        .distance('euclidean') // support for 'euclidean' and 'angular'
-//        .linkage('avg')        // support for 'avg', 'max' and 'min'
-//        .verbose(true)         // false by default
-//        .posKey('rgbValue')    // 'position' by default
-//
-//        // pass in an array of objects w/ array values for 'position' or specified posKey()
-//        .data(data);         // as an array of objects w/ array values for 'position'
-//
-//// integrate into d3 layout.cluster
-//    var cluster = d3.layout.cluster().size([200, 200]),
-//        nodes = cluster.nodes(colorCluster.tree()),
-//        links = cluster.links(nodes);
-//
-//// get the tree, cut incertain ways
-//    colorCluster.orderedNodes();  // returns array of leaves, ordered by tree structure
-//    colorCluster.getClusters(k); // return k(2 to n) clusters of leaves
+    // now leaves are ordered by cluster id
+    var leaves = tree.leaves();
 
+    // will keep index of element in original data here
+    var order = [];
+
+    leaves.forEach(function (leaf) {
+        var d = leaf.data.canonical; // original row from matrix
+        var i = data.indexOf(d);
+        order.push(i);
+    });
+    console.log('Data clustered (hierarchical)');
+    console.log(order);
+
+    return order;
 };
 
 MatrixViewer.prototype.clusterKmeans = function (data, numClusters) {
@@ -255,6 +262,9 @@ MatrixViewer.prototype._draw = function () {
 
     var matrix = [];
     var numNodes = nodes.length;
+    var maxRMSD = d3.max(self.data.links, function (d) {
+        return d.value;
+    });
     var matrixScale = d3.scaleBand().range([0, width]).domain(d3.range(numNodes));
     var colorScaleCluster = d3.scaleOrdinal(d3.schemeCategory10);
 
@@ -276,6 +286,7 @@ MatrixViewer.prototype._draw = function () {
     self.data.links.forEach(function (link) {
         matrix[link.source][link.target].z += link.value;
         matrix[link.target][link.source].z += link.value;
+
 
         matrix[link.source][link.target].group = link.group;
         matrix[link.target][link.source].group = link.group;
@@ -356,7 +367,8 @@ MatrixViewer.prototype._draw = function () {
             var group1 = matrix[numNodes - 1][a].z;
             var group2 = matrix[numNodes - 1][b].z;
             return group1 - group2;
-        })
+        }),
+        hcluster: self.data.hclusters
     };
 
     d3.select('#order').on('change', function () {
@@ -384,12 +396,12 @@ MatrixViewer.prototype._draw = function () {
     }
 
     function changeColor(value) {
-//        return;
         if (value === 'rmsd') {
             colorScale = colorScaleRMSD;
             svg.selectAll('.cell')
                 .transition()
                 .style('fill', function (d) {
+                    var v = d.z;
                     return colorScale(d.z);
                 });
 
